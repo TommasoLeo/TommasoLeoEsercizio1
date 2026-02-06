@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Ritratto Interattivo</title>
+
+	<style>
+		body {
+			margin: 0;
+			background-color: #0f0f0f;
+			color: #eaeaea;
+			font-family: Helvetica, Arial, sans-serif;
+		}
+
+		/* link homepage */
+		.home {
+			position: fixed;
+			top: 20px;
+			left: 20px;
+			text-decoration: none;
+			color: #eaeaea;
+			font-size: 14px;
+			opacity: 0.7;
+			transition: opacity 0.3s;
+		}
+
+		.home:hover {
+			opacity: 1;
+		}
+
+		/* colonna sinistra */
+		.container {
+			margin-top: 100px;
+			margin-left: 80px;
+			max-width: 720px;
+		}
+
+		#sketch-holder {
+			margin-bottom: 32px;
+		}
+
+		/* descrizione */
+		.description {
+			max-width: 520px;
+			font-size: 14px;
+			line-height: 1.6;
+			color: #bdbdbd;
+		}
+
+		.description h2 {
+			font-size: 16px;
+			font-weight: normal;
+			margin-bottom: 12px;
+			color: #ffffff;
+		}
+	</style>
+</head>
+<body>
+
+	<a class="home" href="index.html">← torna alla homepage</a>
+
+	<div class="container">
+		<div id="sketch-holder"></div>
+
+		<div class="description">
+			<h2>Ritratto di particelle sensibili</h2>
+			<p>
+				L’immagine viene scomposta in una costellazione di punti che
+				mantengono la memoria della forma originale.
+				Il movimento del mouse agisce come una presenza invisibile:
+				non controlla, ma disturba temporaneamente l’equilibrio del volto,
+				che lentamente ritorna alla sua struttura iniziale.
+			</p>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+	<script>
+		let img
+		let particles = []
+		let spacing = 7
+
+		function preload() {
+			img = loadImage('tommyphoto.png')
+		}
+
+		function setup() {
+			let canvas = createCanvas(700, 700)
+			canvas.parent('sketch-holder')
+			pixelDensity(1)
+
+			img.resize(img.width / 6, img.height / 6)
+			img.loadPixels()
+
+			let offsetX = width / 2 - (img.width * spacing) / 2
+			let offsetY = height / 2 - (img.height * spacing) / 2
+
+			for (let y = 0; y < img.height; y++) {
+				for (let x = 0; x < img.width; x++) {
+
+					let index = (x + y * img.width) * 4
+					let r = img.pixels[index]
+					let g = img.pixels[index + 1]
+					let b = img.pixels[index + 2]
+					let a = img.pixels[index + 3]
+
+					if (a > 60) {
+						particles.push(
+							new Particle(
+								offsetX + x * spacing,
+								offsetY + y * spacing,
+								color(r, g, b)
+							)
+						)
+					}
+				}
+			}
+		}
+
+		function draw() {
+			background(15)
+			for (let p of particles) {
+				p.update()
+				p.display()
+			}
+		}
+
+		class Particle {
+			constructor(x, y, col) {
+				this.origin = createVector(x, y)
+				this.pos = this.origin.copy()
+				this.vel = createVector(0, 0)
+				this.col = col
+				this.size = random(2.5, 4)
+				this.noiseSeed = random(1000)
+			}
+
+			update() {
+				let n = noise(this.noiseSeed, frameCount * 0.003)
+				let angle = n * TWO_PI * 2
+				let drift = p5.Vector.fromAngle(angle).mult(0.25)
+				this.vel.add(drift)
+
+				let home = p5.Vector.sub(this.origin, this.pos)
+				home.mult(0.03)
+				this.vel.add(home)
+
+				let d = dist(mouseX, mouseY, this.pos.x, this.pos.y)
+				if (d < 120) {
+					let push = p5.Vector.sub(this.pos, createVector(mouseX, mouseY))
+					push.normalize()
+					push.mult((120 - d) * 0.04)
+					this.vel.add(push)
+				}
+
+				this.vel.limit(1.2)
+				this.pos.add(this.vel)
+				this.noiseSeed += 0.01
+			}
+
+			display() {
+				noStroke()
+				fill(this.col)
+				circle(this.pos.x, this.pos.y, this.size)
+			}
+		}
+	</script>
+</body>
+</html>
